@@ -1,21 +1,19 @@
 import rateLimit from 'express-rate-limit';
 import cors, { CorsOptions } from 'cors';
 
-const isTest = process.env.NODE_ENV === 'test';
-
-// Global limiter — all endpoints: 100 req / 15 min
+// Global limiter — all endpoints: 1000 req / 15 min para pruebas fluidas
 export const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: isTest ? 1000 : 100,
+  max: 1000,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again later' },
 });
 
-// Auth limiter — login/register only: 5 req / 15 min (brute force protection)
+// Auth limiter — login/register: elevado a 1000 para permitir pruebas ilimitadas en desarrollo
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: isTest ? 1000 : 5,
+  max: 1000,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { error: 'Too many login attempts, please try again later' },
