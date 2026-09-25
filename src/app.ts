@@ -15,16 +15,19 @@ export const app = express();
 // Security layers — order matters
 app.use(helmet());
 app.use(globalLimiter);
-app.options('*', cors(corsOptions)); // preflight
-app.use(cors(corsOptions));
+app.use(cors(corsOptions)); // cors middleware handles OPTIONS preflight automatically in Express
 
 // Body parsing
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Sanitize inputs AFTER parsing, BEFORE routes (OWASP Injection Protection)
-app.use(mongoSanitize());
+// Sanitize inputs AFTER parsing, BEFORE routes (OWASP Injection Protection compatible with Express 5)
+app.use((req, _res, next) => {
+  if (req.body) mongoSanitize.sanitize(req.body);
+  if (req.params) mongoSanitize.sanitize(req.params);
+  next();
+});
 
 // Health check endpoint
 app.get('/api/v1/health', (_req, res) => {
