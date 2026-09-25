@@ -54,23 +54,27 @@ app.get('/', (_req, res) => {
     button:hover { background: #b8001f; }
     button.sec { background: var(--dark); }
     button.sec:hover { background: #14213d; }
+    button.toggle { background: #e65100; }
+    button.toggle:hover { background: #ef6c00; }
     pre { background: #1e1e1e; color: #4ec9b0; padding: 14px; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; max-height: 250px; }
     .donante-item { background: white; border: 1px solid #ddd; padding: 12px; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
     .btn-sm { padding: 6px 12px; font-size: 0.75rem; width: auto; margin: 0; background: #d90429; }
-    .status-box { padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; margin-bottom: 12px; display: none; }
+    .status-box { padding: 10px 14px; border-radius: 6px; font-size: 0.9rem; font-weight: 600; margin-bottom: 12px; display: none; }
     .status-box.active { display: block; background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+    .role-tag { padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; color: #fff; background: #1976d2; text-transform: uppercase; margin-left: 6px; }
+    .role-tag.admin { background: #d32f2f; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>🩸 Banco de Sangre <span class="badge">API Dashboard v1</span></h1>
-    <p>Interfaz interactiva web para enviar peticiones a los endpoints REST de Autenticación y Donantes.</p>
+    <h1>🩸 Banco de Sangre <span class="badge">Semana 8: RBAC & Seguridad</span></h1>
+    <p>Interfaz interactiva para probar el control de roles (USER vs ADMIN) y los endpoints del sistema.</p>
 
     <div id="sessionStatus" class="status-box"></div>
 
     <div class="grid">
       <div class="card">
-        <h2>1. Autenticación (JWT)</h2>
+        <h2>1. Autenticación & Roles (RBAC)</h2>
         <form onsubmit="return false;">
           <label>Nombre:</label>
           <input type="text" id="authName" value="Kevin Admin">
@@ -84,6 +88,7 @@ app.get('/', (_req, res) => {
             <button type="button" class="sec" onclick="loginUser()">Iniciar Sesión</button>
           </div>
           <button type="button" class="sec" style="background:#4a5568;" onclick="getMe()">Ver Perfil (/auth/me)</button>
+          <button type="button" class="toggle" onclick="toggleRole()">⚡ Cambiar Rol (USER ↔ ADMIN)</button>
         </form>
       </div>
 
@@ -130,10 +135,11 @@ app.get('/', (_req, res) => {
   <script>
     const log = (data) => document.getElementById('output').textContent = JSON.stringify(data, null, 2);
 
-    function showSession(email) {
+    function showSession(email, role = 'user') {
       const box = document.getElementById('sessionStatus');
       box.className = 'status-box active';
-      box.textContent = '🔓 Sesión Activa (Cookie HttpOnly): ' + email;
+      const roleClass = role === 'admin' ? 'role-tag admin' : 'role-tag';
+      box.innerHTML = '🔓 Sesión Activa: <strong>' + email + '</strong> <span class="' + roleClass + '">Rol: ' + role.toUpperCase() + '</span>';
     }
 
     async function registerUser() {
@@ -150,7 +156,6 @@ app.get('/', (_req, res) => {
       const data = await res.json();
       log(data);
       if (res.ok) {
-        // Auto iniciar sesión tras registrarse exitosamente
         await loginUser();
       }
     }
@@ -169,7 +174,7 @@ app.get('/', (_req, res) => {
       const data = await res.json();
       log(data);
       if (res.ok) {
-        showSession(email);
+        await getMe();
         listDonantes();
       }
     }
@@ -179,7 +184,19 @@ app.get('/', (_req, res) => {
       const data = await res.json();
       log(data);
       if (res.ok && data.email) {
-        showSession(data.email);
+        showSession(data.email, data.role || 'user');
+      }
+    }
+
+    async function toggleRole() {
+      const res = await fetch('/api/v1/auth/toggle-role', {
+        method: 'POST',
+        credentials: 'same-origin'
+      });
+      const data = await res.json();
+      log(data);
+      if (res.ok) {
+        await getMe();
       }
     }
 
@@ -232,7 +249,7 @@ app.get('/', (_req, res) => {
         credentials: 'same-origin'
       });
       if (res.status === 204) {
-        log({ message: 'Donante eliminado con éxito (204 No Content)' });
+        log({ message: 'Donante eliminado con éxito (204 No Content - Permiso de Admin)' });
       } else {
         log(await res.json());
       }
