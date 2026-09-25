@@ -57,12 +57,16 @@ app.get('/', (_req, res) => {
     pre { background: #1e1e1e; color: #4ec9b0; padding: 14px; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; max-height: 250px; }
     .donante-item { background: white; border: 1px solid #ddd; padding: 12px; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
     .btn-sm { padding: 6px 12px; font-size: 0.75rem; width: auto; margin: 0; background: #d90429; }
+    .status-box { padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; margin-bottom: 12px; display: none; }
+    .status-box.active { display: block; background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>🩸 Banco de Sangre <span class="badge">API Dashboard v1</span></h1>
     <p>Interfaz interactiva web para enviar peticiones a los endpoints REST de Autenticación y Donantes.</p>
+
+    <div id="sessionStatus" class="status-box"></div>
 
     <div class="grid">
       <div class="card">
@@ -126,40 +130,64 @@ app.get('/', (_req, res) => {
   <script>
     const log = (data) => document.getElementById('output').textContent = JSON.stringify(data, null, 2);
 
+    function showSession(email) {
+      const box = document.getElementById('sessionStatus');
+      box.className = 'status-box active';
+      box.textContent = '🔓 Sesión Activa (Cookie HttpOnly): ' + email;
+    }
+
     async function registerUser() {
       const res = await fetch('/api/v1/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({
           name: document.getElementById('authName').value,
           email: document.getElementById('authEmail').value,
           password: document.getElementById('authPassword').value
         })
       });
-      log(await res.json());
+      const data = await res.json();
+      log(data);
+      if (res.ok) {
+        // Auto iniciar sesión tras registrarse exitosamente
+        await loginUser();
+      }
     }
 
     async function loginUser() {
+      const email = document.getElementById('authEmail').value;
       const res = await fetch('/api/v1/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({
-          email: document.getElementById('authEmail').value,
+          email: email,
           password: document.getElementById('authPassword').value
         })
       });
-      log(await res.json());
+      const data = await res.json();
+      log(data);
+      if (res.ok) {
+        showSession(email);
+        listDonantes();
+      }
     }
 
     async function getMe() {
-      const res = await fetch('/api/v1/auth/me');
-      log(await res.json());
+      const res = await fetch('/api/v1/auth/me', { credentials: 'same-origin' });
+      const data = await res.json();
+      log(data);
+      if (res.ok && data.email) {
+        showSession(data.email);
+      }
     }
 
     async function createDonante() {
       const res = await fetch('/api/v1/donantes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({
           fullName: document.getElementById('dName').value,
           bloodType: document.getElementById('dType').value,
@@ -175,7 +203,7 @@ app.get('/', (_req, res) => {
     }
 
     async function listDonantes() {
-      const res = await fetch('/api/v1/donantes');
+      const res = await fetch('/api/v1/donantes', { credentials: 'same-origin' });
       const data = await res.json();
       log(data);
       const container = document.getElementById('donantesList');
@@ -199,7 +227,10 @@ app.get('/', (_req, res) => {
     }
 
     async function deleteDonante(id) {
-      const res = await fetch('/api/v1/donantes/' + id, { method: 'DELETE' });
+      const res = await fetch('/api/v1/donantes/' + id, {
+        method: 'DELETE',
+        credentials: 'same-origin'
+      });
       if (res.status === 204) {
         log({ message: 'Donante eliminado con éxito (204 No Content)' });
       } else {
