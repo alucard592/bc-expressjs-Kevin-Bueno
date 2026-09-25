@@ -12,6 +12,7 @@ router.post('/refresh', authController.refresh);
 
 // Rutas protegidas
 router.get('/me', authMiddleware, authController.me);
+router.post('/toggle-role', authMiddleware, authController.toggleRole);
 router.post('/logout', authMiddleware, authController.logout);
 
 export default router;

@@ -1,6 +1,9 @@
 import { Request, Response, NextFunction, CookieOptions } from 'express';
 import * as authService from '../services/auth.service';
 import { registerSchema, loginSchema } from '../schemas/auth.schema';
+import { UserModel } from '../models/user.model';
+import { AppError } from '../errors/AppError';
+import { signAccessToken, signRefreshToken } from '../utils/jwt';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -66,6 +69,36 @@ export async function me(req: Request, res: Response, next: NextFunction): Promi
       email: user.email,
       name: user.name,
       role: user.role,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function toggleRole(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const userId = req.user!.sub;
+    const user = await UserModel.findById(userId);
+    if (!user) throw new AppError(404, 'Usuario no encontrado');
+
+    const newRole = user.role === 'admin' ? 'user' : 'admin';
+    user.role = newRole;
+    await user.save();
+
+    const payload = { sub: user._id.toString(), email: user.email, role: user.role };
+    const accessToken = signAccessToken(payload);
+    const refreshToken = signRefreshToken({ sub: user._id.toString() });
+
+    setTokenCookies(res, {
+      accessToken,
+      refreshToken,
+      accessMaxAge: 15 * 60 * 1000,
+      refreshMaxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.status(200).json({
+      message: `Rol actualizado a ${newRole.toUpperCase()} con éxito`,
+      role: newRole,
     });
   } catch (err) {
     next(err);
