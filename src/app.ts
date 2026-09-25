@@ -1,14 +1,35 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
+import cors from 'cors';
+import mongoSanitize from 'express-mongo-sanitize';
+
 import authRouter from './routes/auth.routes';
 import donanteRouter from './routes/donante.routes';
 import { errorHandler } from './middlewares/errorHandler';
 import { notFound } from './middlewares/notFound';
+import { globalLimiter, corsOptions } from './config/security';
 
 export const app = express();
 
+// Security layers — order matters
+app.use(helmet());
+app.use(globalLimiter);
+app.options('*', cors(corsOptions)); // preflight
+app.use(cors(corsOptions));
+
+// Body parsing
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// Sanitize inputs AFTER parsing, BEFORE routes (OWASP Injection Protection)
+app.use(mongoSanitize());
+
+// Health check endpoint
+app.get('/api/v1/health', (_req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
 // Rutas de autenticación
 app.use('/api/v1/auth', authRouter);
