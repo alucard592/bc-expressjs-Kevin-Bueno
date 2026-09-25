@@ -1,5 +1,9 @@
 import jwt from 'jsonwebtoken';
-import { AppError } from '../errors/AppError';
+
+const ACCESS_SECRET =
+  process.env.JWT_ACCESS_SECRET || 'banco_sangre_jwt_access_secret_default_key_1234567890';
+const REFRESH_SECRET =
+  process.env.JWT_REFRESH_SECRET || 'banco_sangre_jwt_refresh_secret_default_key_1234567890';
 
 export interface JwtPayload {
   sub: string;
@@ -10,27 +14,19 @@ export interface JwtPayload {
 // ─── Access Token (15 minutos) ──────────────────────────────────────────────
 
 export function signAccessToken(payload: JwtPayload): string {
-  const secret = process.env.JWT_ACCESS_SECRET;
-  if (!secret) throw new AppError(500, 'JWT_ACCESS_SECRET is not configured');
-  return jwt.sign(payload, secret, { expiresIn: '15m' });
+  return jwt.sign(payload, ACCESS_SECRET, { expiresIn: '15m' });
 }
 
 export function verifyAccessToken(token: string): JwtPayload {
-  const secret = process.env.JWT_ACCESS_SECRET;
-  if (!secret) throw new AppError(500, 'JWT_ACCESS_SECRET is not configured');
-  return jwt.verify(token, secret) as JwtPayload;
+  return jwt.verify(token, ACCESS_SECRET) as JwtPayload;
 }
 
 // ─── Refresh Token (7 días) ─────────────────────────────────────────────────
 
 export function signRefreshToken(payload: Pick<JwtPayload, 'sub'>): string {
-  const secret = process.env.JWT_REFRESH_SECRET;
-  if (!secret) throw new AppError(500, 'JWT_REFRESH_SECRET is not configured');
-  return jwt.sign(payload, secret, { expiresIn: '7d' });
+  return jwt.sign(payload, REFRESH_SECRET, { expiresIn: '7d' });
 }
 
 export function verifyRefreshToken(token: string): JwtPayload {
-  const secret = process.env.JWT_REFRESH_SECRET;
-  if (!secret) throw new AppError(500, 'JWT_REFRESH_SECRET is not configured');
-  return jwt.verify(token, secret) as JwtPayload;
+  return jwt.verify(token, REFRESH_SECRET) as JwtPayload;
 }
