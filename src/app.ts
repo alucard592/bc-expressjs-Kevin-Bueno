@@ -1,33 +1,17 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
-import helmet from 'helmet';
-import cors from 'cors';
-import mongoSanitize from 'express-mongo-sanitize';
 
 import authRouter from './routes/auth.routes';
 import donanteRouter from './routes/donante.routes';
 import { errorHandler } from './middlewares/errorHandler';
 import { notFound } from './middlewares/notFound';
-import { globalLimiter, corsOptions } from './config/security';
 
 export const app = express();
-
-// Security layers — order matters
-app.use(helmet({ contentSecurityPolicy: false }));
-app.use(globalLimiter);
-app.use(cors(corsOptions));
 
 // Body parsing
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-
-// Sanitize inputs AFTER parsing, BEFORE routes (OWASP Injection Protection compatible with Express 5)
-app.use((req, _res, next) => {
-  if (req.body) mongoSanitize.sanitize(req.body);
-  if (req.params) mongoSanitize.sanitize(req.params);
-  next();
-});
 
 // Interfaz interactiva de prueba en el navegador (GET /)
 app.get('/', (_req, res) => {
@@ -37,7 +21,7 @@ app.get('/', (_req, res) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Banco de Sangre - API Interactive Panel</title>
+  <title>Banco de Sangre - API Interactive Panel (Semana 7)</title>
   <style>
     :root { --primary: #d90429; --dark: #1d3557; --light: #f8f9fa; --border: #e0e0e0; }
     body { font-family: system-ui, -apple-system, sans-serif; background: #edf2f4; color: #2b2d42; margin: 0; padding: 24px; }
@@ -63,7 +47,7 @@ app.get('/', (_req, res) => {
 </head>
 <body>
   <div class="container">
-    <h1>🩸 Banco de Sangre <span class="badge">API Dashboard v1</span></h1>
+    <h1>🩸 Banco de Sangre <span class="badge">Semana 7: Autenticación & Donantes</span></h1>
     <p>Interfaz interactiva web para enviar peticiones a los endpoints REST de Autenticación y Donantes.</p>
 
     <div id="sessionStatus" class="status-box"></div>
@@ -73,7 +57,7 @@ app.get('/', (_req, res) => {
         <h2>1. Autenticación (JWT)</h2>
         <form onsubmit="return false;">
           <label>Nombre:</label>
-          <input type="text" id="authName" value="Kevin Admin">
+          <input type="text" id="authName" value="Kevin User">
           <label>Correo Electrónico:</label>
           <input type="email" id="authEmail" value="kevin@bancodesangre.org">
           <label>Contraseña:</label>
@@ -150,7 +134,6 @@ app.get('/', (_req, res) => {
       const data = await res.json();
       log(data);
       if (res.ok) {
-        // Auto iniciar sesión tras registrarse exitosamente
         await loginUser();
       }
     }
@@ -242,11 +225,6 @@ app.get('/', (_req, res) => {
 </body>
 </html>
   `);
-});
-
-// Health check endpoint
-app.get('/api/v1/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // Rutas de autenticación
